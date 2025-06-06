@@ -19,15 +19,13 @@ def load_to_db(df: pd.DataFrame, table_name: str, engine) -> None:
     """
     Loads the given DataFrame into the specified Postgres table.
     """
-    df.to_sql(table_name, engine, if_exists='replace', index=False)  # pandas.DataFrame.to_sql leverages SQLAlchemy  [oai_citation:7‡pandas.pydata.org](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_sql.html?utm_source=chatgpt.com)
+    df.to_sql(
+        table_name, engine, if_exists="replace", index=False
+    )  # pandas.DataFrame.to_sql leverages SQLAlchemy  [oai_citation:7‡pandas.pydata.org](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_sql.html?utm_source=chatgpt.com)
 
 
 def export_tables_to_sqlite(
-    pg_user: str,
-    pg_pass: str,
-    pg_host: str,
-    pg_db: str,
-    sqlite_file: str = "maiven.db"
+    pg_user: str, pg_pass: str, pg_host: str, pg_db: str, sqlite_file: str = "maiven.db"
 ) -> None:
     """
     Connects to the Postgres database and exports the 'company' and 'policy'
@@ -35,19 +33,27 @@ def export_tables_to_sqlite(
     """
     # 1. Create a SQLAlchemy engine for Postgres
     pg_url = f"postgresql+psycopg2://{pg_user}:{pg_pass}@{pg_host}/{pg_db}"
-    pg_engine = create_engine(pg_url)  # SQLAlchemy engine connects to Postgres  [oai_citation:8‡medium.com](https://medium.com/%40alestamm/importing-data-from-a-postgresql-database-to-a-pandas-dataframe-5f4bffcd8bb2?utm_source=chatgpt.com) [oai_citation:9‡dev.to](https://dev.to/varungujarathi9/exporting-a-large-postgresql-table-using-python-4non?utm_source=chatgpt.com)
+    pg_engine = create_engine(
+        pg_url
+    )  # SQLAlchemy engine connects to Postgres  [oai_citation:8‡medium.com](https://medium.com/%40alestamm/importing-data-from-a-postgresql-database-to-a-pandas-dataframe-5f4bffcd8bb2?utm_source=chatgpt.com) [oai_citation:9‡dev.to](https://dev.to/varungujarathi9/exporting-a-large-postgresql-table-using-python-4non?utm_source=chatgpt.com)
 
     # 2. Read 'company' and 'policy' tables into pandas DataFrames
     with pg_engine.connect() as conn:
-        company_df = pd.read_sql(text("SELECT * FROM company"), conn)  # pd.read_sql reads table via SQLAlchemy engine  [oai_citation:10‡medium.com](https://medium.com/%40alestamm/importing-data-from-a-postgresql-database-to-a-pandas-dataframe-5f4bffcd8bb2?utm_source=chatgpt.com) [oai_citation:11‡stackoverflow.com](https://stackoverflow.com/questions/6148421/how-to-convert-a-postgres-database-to-sqlite?utm_source=chatgpt.com)
-        policy_df  = pd.read_sql(text("SELECT * FROM policy"), conn)
+        company_df = pd.read_sql(
+            text("SELECT * FROM company"), conn
+        )  # pd.read_sql reads table via SQLAlchemy engine  [oai_citation:10‡medium.com](https://medium.com/%40alestamm/importing-data-from-a-postgresql-database-to-a-pandas-dataframe-5f4bffcd8bb2?utm_source=chatgpt.com) [oai_citation:11‡stackoverflow.com](https://stackoverflow.com/questions/6148421/how-to-convert-a-postgres-database-to-sqlite?utm_source=chatgpt.com)
+        policy_df = pd.read_sql(text("SELECT * FROM policy"), conn)
 
     # 3. Open (or create) the SQLite database file using sqlite3
-    sqlite_conn = sqlite3.connect(sqlite_file)  # sqlite3 shipped with Python  [oai_citation:12‡theleftjoin.com](https://theleftjoin.com/how-to-write-a-pandas-dataframe-to-an-sqlite-table/?utm_source=chatgpt.com) [oai_citation:13‡serverfault.com](https://serverfault.com/questions/274355/how-to-convert-a-postgres-database-to-sqlite?utm_source=chatgpt.com)
+    sqlite_conn = sqlite3.connect(
+        sqlite_file
+    )  # sqlite3 shipped with Python  [oai_citation:12‡theleftjoin.com](https://theleftjoin.com/how-to-write-a-pandas-dataframe-to-an-sqlite-table/?utm_source=chatgpt.com) [oai_citation:13‡serverfault.com](https://serverfault.com/questions/274355/how-to-convert-a-postgres-database-to-sqlite?utm_source=chatgpt.com)
 
     # 4. Write each DataFrame into SQLite (replacing if tables exist)
-    company_df.to_sql("company", sqlite_conn, if_exists="replace", index=False)  # DataFrame → SQLite table  [oai_citation:14‡theleftjoin.com](https://theleftjoin.com/how-to-write-a-pandas-dataframe-to-an-sqlite-table/?utm_source=chatgpt.com) [oai_citation:15‡pandas.pydata.org](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_sql.html?utm_source=chatgpt.com)
-    policy_df.to_sql("policy",  sqlite_conn, if_exists="replace", index=False)
+    company_df.to_sql(
+        "company", sqlite_conn, if_exists="replace", index=False
+    )  # DataFrame → SQLite table  [oai_citation:14‡theleftjoin.com](https://theleftjoin.com/how-to-write-a-pandas-dataframe-to-an-sqlite-table/?utm_source=chatgpt.com) [oai_citation:15‡pandas.pydata.org](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_sql.html?utm_source=chatgpt.com)
+    policy_df.to_sql("policy", sqlite_conn, if_exists="replace", index=False)
 
     sqlite_conn.close()
     print(f"Exported 'company' and 'policy' tables into '{sqlite_file}'.")
@@ -62,12 +68,18 @@ def query_active_policies(sqlite_file: str = "maiven.db") -> None:
     Prints the resulting rows.
     """
     conn = sqlite3.connect(sqlite_file)
-    conn.row_factory = sqlite3.Row  # Enable name‐based column access  [oai_citation:16‡theleftjoin.com](https://theleftjoin.com/how-to-write-a-pandas-dataframe-to-an-sqlite-table/?utm_source=chatgpt.com) [oai_citation:17‡atcoordinates.info](https://atcoordinates.info/2017/07/24/copying-tables-from-sqlite-to-postgresql/?utm_source=chatgpt.com)
+    conn.row_factory = (
+        sqlite3.Row
+    )  # Enable name‐based column access  [oai_citation:16‡theleftjoin.com](https://theleftjoin.com/how-to-write-a-pandas-dataframe-to-an-sqlite-table/?utm_source=chatgpt.com) [oai_citation:17‡atcoordinates.info](https://atcoordinates.info/2017/07/24/copying-tables-from-sqlite-to-postgresql/?utm_source=chatgpt.com)
 
     # 1. Compute date boundaries (YYYY-MM-DD) using Python’s datetime
-    today = datetime.utcnow().date()                      # Current UTC date  [oai_citation:18‡dev.to](https://dev.to/varungujarathi9/exporting-a-large-postgresql-table-using-python-4non?utm_source=chatgpt.com)
-    cutoff_100 = today - timedelta(days=100)               # 100 days ago  [oai_citation:19‡dev.to](https://dev.to/varungujarathi9/exporting-a-large-postgresql-table-using-python-4non?utm_source=chatgpt.com)
-    cutoff_365 = today - timedelta(days=365)               # 365 days ago
+    today = (
+        datetime.utcnow().date()
+    )  # Current UTC date  [oai_citation:18‡dev.to](https://dev.to/varungujarathi9/exporting-a-large-postgresql-table-using-python-4non?utm_source=chatgpt.com)
+    cutoff_100 = today - timedelta(
+        days=100
+    )  # 100 days ago  [oai_citation:19‡dev.to](https://dev.to/varungujarathi9/exporting-a-large-postgresql-table-using-python-4non?utm_source=chatgpt.com)
+    cutoff_365 = today - timedelta(days=365)  # 365 days ago
 
     # 2. Define the SQL query with two CTEs: recent_policies and avg_past_year
     sql = f"""
@@ -125,7 +137,7 @@ def main() -> None:
         "host": "localhost",
         "database": "maiven",
         "user": "michaelsigamani",
-        "password": "policy"
+        "password": "policy",
     }
 
     # 1. Ensure Postgres database exists (connect & optionally CREATE DATABASE)
@@ -133,7 +145,7 @@ def main() -> None:
         host=db_params["host"],
         database=db_params["database"],
         user=db_params["user"],
-        password=db_params["password"]
+        password=db_params["password"],
     )
     conn.set_session(autocommit=True)
     cur = conn.cursor()
@@ -152,7 +164,7 @@ def main() -> None:
     # 3. Define CSV file paths
     csv_files = {
         "company": "data/company_data.csv",
-        "policy":  "data/random_policies.csv",
+        "policy": "data/random_policies.csv",
     }
 
     # 4. Basic ETL: clean and load each table into Postgres
@@ -170,7 +182,7 @@ def main() -> None:
         pg_pass=db_params["password"],
         pg_host=db_params["host"],
         pg_db=db_params["database"],
-        sqlite_file="maiven.db"
+        sqlite_file="maiven.db",
     )
 
     # 6. Run the active‐policies query on SQLite and print results
