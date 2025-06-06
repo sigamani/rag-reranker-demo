@@ -1,0 +1,51 @@
+name: ETL Pipeline CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15         # Use Postgres 15; adjust if desired  [oai_citation:10‡docs.github.com](https://docs.github.com/en/actions/use-cases-and-examples/using-containerized-services/creating-postgresql-service-containers?utm_source=chatgpt.com) [oai_citation:11‡til.simonwillison.net](https://til.simonwillison.net/github-actions/postgresq-service-container?utm_source=chatgpt.com)
+        env:
+          POSTGRES_USER: postgres  # Required for default user in tests  [oai_citation:12‡docs.github.com](https://docs.github.com/en/actions/use-cases-and-examples/using-containerized-services/creating-postgresql-service-containers?utm_source=chatgpt.com) [oai_citation:13‡stackoverflow.com](https://stackoverflow.com/questions/68362490/github-actions-to-connect-postgres-service-with-custom-container-image/68374167?utm_source=chatgpt.com)
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4  # Latest stable checkout action  [oai_citation:14‡stackoverflow.com](https://stackoverflow.com/questions/75702592/how-to-set-up-postgresql-in-github-actions-workflow?utm_source=chatgpt.com)
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"   # Ensure compatibility with your code  [oai_citation:15‡gist.github.com](https://gist.github.com/jefftriplett/d35e120ef9884bcff61c5ade0740f52d?utm_source=chatgpt.com)
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas sqlalchemy psycopg2-binary pytest
+        # We install pytest and DB drivers so tests can connect 
+
+      - name: Run pytest
+        env:
+          PGHOST: localhost         # Ensures psycopg2 uses correct host  [oai_citation:16‡gist.github.com](https://gist.github.com/RizkyRajitha/ca945c55ab09bcc2c7c150b2fed7db13?utm_source=chatgpt.com)
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+          PGPORT: 5432
+        run: |
+          pytest --maxfail=1 --disable-warnings -q
