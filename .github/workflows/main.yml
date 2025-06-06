@@ -20,7 +20,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U michaelsigamani"
+          --health-cmd="pg_isready -U mich aelsigamani"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
@@ -61,13 +61,21 @@ jobs:
 
       - name: Run unit tests
         run: pytest -q
-        
-      - name: Run ETL pipeline
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: maiven
-          DB_USER: michaelsigamani
-          DB_PASS: policy
-        run: python main.py
 
+      - name: Save CSV data to SQLite DB
+        run: |
+          python main.py load \
+            --csv-dir data \
+            --db-path data/maiven.db
+
+      - name: Query Active Policies
+        run: |
+          python main.py query \
+            --db-path data/maiven.db \
+            --active-policies
+
+      - name: Query Number of Jurisdictions
+        run: |
+          python main.py query \
+            --db-path data/maiven.db \
+            "SELECT COUNT(DISTINCT geography) AS num_jurisdictions FROM policy;"
