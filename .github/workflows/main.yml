@@ -14,16 +14,16 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: mich aelsigamani
+          POSTGRES_USER: michaelsigamani
           POSTGRES_PASSWORD: policy
           POSTGRES_DB: maiven
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U mich aelsigamani"
+          --health-cmd="pg_isready -U michaelsigamani"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=10
 
     steps:
       - name: Checkout repository
@@ -38,34 +38,25 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
-        #  [oai_citation:0‡stackoverflow.com](https://stackoverflow.com/questions/75310294/github-actions-poetry-installs-black-but-ci-workflow-does-not-find-it?utm_source=chatgpt.com) 
-        # Pandas ≥1.5.2 is required for Python 3.10 compatibility.  [oai_citation:1‡stackoverflow.com](https://stackoverflow.com/questions/75310294/github-actions-poetry-installs-black-but-ci-workflow-does-not-find-it?utm_source=chatgpt.com)
-        # psycopg2-binary is needed for PostgreSQL connectivity. 
-        # SQLAlchemy ≥1.4 supports df.to_sql(). 
-        # pytest ≥7.0 is required for Python 3.10. 
 
       - name: Lint with Flake8
         run: |
           pip install flake8
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
-        #  [oai_citation:2‡dev.to](https://dev.to/ricardochaves/python-lint-with-github-actions-2i7p?utm_source=chatgpt.com) [oai_citation:3‡reddit.com](https://www.reddit.com/r/learnpython/comments/143cgqu/how_can_i_use_github_actions_to_first_lint_the/?utm_source=chatgpt.com)
-        # First flake8 invocation fails fast on syntax errors.  [oai_citation:4‡dev.to](https://dev.to/ricardochaves/python-lint-with-github-actions-2i7p?utm_source=chatgpt.com) [oai_citation:5‡reddit.com](https://www.reddit.com/r/learnpython/comments/143cgqu/how_can_i_use_github_actions_to_first_lint_the/?utm_source=chatgpt.com)
-        # Second invocation enforces style: max complexity, line length 88 to match Black.  [oai_citation:6‡dev.to](https://dev.to/ricardochaves/python-lint-with-github-actions-2i7p?utm_source=chatgpt.com) [oai_citation:7‡stackoverflow.com](https://stackoverflow.com/questions/74417311/github-action-to-run-black-on-specific-folder-on-a-push?utm_source=chatgpt.com)
 
       - name: Check code formatting with Black
         uses: psf/black@stable
         with:
-          # "--check --diff" causes Black to fail if any file is not formatted
           black_args: ". --check --diff"
-        #  [oai_citation:8‡black.readthedocs.io](https://black.readthedocs.io/en/stable/integrations/github_actions.html?utm_source=chatgpt.com) [oai_citation:9‡github.com](https://github.com/marketplace/actions/run-black-formatter?utm_source=chatgpt.com) 
-        # psf/black@stable runs Black in check mode, showing diffs if formatting is needed.  [oai_citation:10‡github.com](https://github.com/marketplace/actions/run-black-formatter?utm_source=chatgpt.com) [oai_citation:11‡black.readthedocs.io](https://black.readthedocs.io/en/stable/integrations/github_actions.html?utm_source=chatgpt.com)
 
-      - name: Wait for PostgreSQL to be ready
+      - name: Wait for PostgreSQL to be healthy
         run: |
-          until pg_isready -h localhost -p 5432 -U mich aelsigamani; do
-            echo "Waiting for Postgres..."
-            sleep 1
+          echo "Waiting for Postgres to become healthy..."
+          for i in {1..15}; do
+            pg_isready -h localhost -p 5432 -U "michaelsigamani" && break
+            echo "Still waiting... ($i/15)"
+            sleep 5
           done
 
       - name: Run ETL pipeline
@@ -73,13 +64,14 @@ jobs:
           DB_HOST: localhost
           DB_PORT: 5432
           DB_NAME: maiven
-          DB_USER: mich aelsigamani
+          DB_USER: michaelsigamani
           DB_PASS: policy
         run: python etl.py
-        # 
-        # The etl.py script reads CSVs, cleans data, and loads into Postgres.  [oai_citation:12‡black.readthedocs.io](https://black.readthedocs.io/en/stable/integrations/github_actions.html?utm_source=chatgpt.com)
 
-      - name: Run tests
+      - name: Run unit tests
         run: pytest -q
-        # 
-        # Pytest validates that clean_data() and load_to_db() work as expected. 
+
+      - name: Run active-policies query against SQLite and print output
+        run: |
+          python query_db.py
+        # If query_db.py exits nonzero (e.g. due to SQL error), CI will fail.
