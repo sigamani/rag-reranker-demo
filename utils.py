@@ -13,7 +13,9 @@ class DBQuery:
 
     def query(self, sql: str) -> list[sqlite3.Row]:
         if not os.path.exists(self.sqlite_path):
-            raise FileNotFoundError(f"SQLite database '{self.sqlite_path}' not found.")
+            raise FileNotFoundError(
+                f"DB database '{self.sqlite_path}' not found."
+            )
 
         conn = sqlite3.connect(self.sqlite_path)
         conn.row_factory = sqlite3.Row
@@ -64,14 +66,13 @@ class DataLoader:
         df_policy.to_sql("policy", conn, if_exists="replace", index=False)
         conn.close()
 
-        print(f"Written 'company' and 'policy' tables to '{self.sqlite_path}'.")
+        print(
+            f"Written 'company' and 'policy' tables to '{self.sqlite_path}'."
+        )
 
 
 def build_active_policies_sql() -> str:
-    """
-    Constructs the SQL for retrieving active policies updated in the last 100 days,
-    along with the average days-since-update over the past year per geography.
-    """
+
     today = datetime.utcnow().date()
     cutoff_100 = today - timedelta(days=100)
     cutoff_365 = today - timedelta(days=365)
@@ -93,7 +94,9 @@ def build_active_policies_sql() -> str:
     avg_past_year AS (
       SELECT
         geography,
-        AVG(julianday('now') - julianday(date(updated_date))) AS avg_days_since_update
+        AVG(julianday('now') - 
+        julianday(date(updated_date))) 
+          AS avg_days_since_update
       FROM policy
       WHERE active = 1
         AND date(updated_date) >= date('{cutoff_365}')
