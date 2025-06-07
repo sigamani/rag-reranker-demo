@@ -12,6 +12,7 @@ from typing import Dict
 from tqdm import tqdm
 from models import Company, Policy
 
+
 # configure logging as before, including file handler etl_errors.log...
 def configure_logging():
     root = logging.getLogger()
@@ -27,7 +28,9 @@ def configure_logging():
     root.addHandler(ch)
     root.addHandler(fh)
 
+
 logger = logging.getLogger(__name__)
+
 
 def ensure_db(path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -35,7 +38,8 @@ def ensure_db(path: str):
     c = conn.cursor()
     c.execute("DROP TABLE IF EXISTS policy;")
     c.execute("DROP TABLE IF EXISTS company;")
-    c.execute("""
+    c.execute(
+        """
         CREATE TABLE company (
           company_id INTEGER PRIMARY KEY,
           name TEXT,
@@ -43,8 +47,10 @@ def ensure_db(path: str):
           sector TEXT,
           last_login TIMESTAMP
         );
-    """)
-    c.execute("""
+    """
+    )
+    c.execute(
+        """
         CREATE TABLE policy (
           policy_id TEXT PRIMARY KEY,
           name TEXT,
@@ -57,17 +63,19 @@ def ensure_db(path: str):
           topics TEXT,
           source_url TEXT
         );
-    """)
+    """
+    )
     conn.commit()
     conn.close()
 
+
 def insert_companies(db_path: str, csv_path: str):
     conn = sqlite3.connect(db_path)
-    cur  = conn.cursor()
+    cur = conn.cursor()
 
     total = sum(1 for _ in open(csv_path)) - 1
     success = 0
-    errors_by_col: Dict[str,int] = {}
+    errors_by_col: Dict[str, int] = {}
     with open(csv_path, newline="") as f:
         reader = csv.DictReader(f)
         for row in tqdm(reader, total=total, desc="Companies"):
@@ -76,36 +84,46 @@ def insert_companies(db_path: str, csv_path: str):
             except Exception as e:
                 # parse which field failed
                 msg = str(e)
-                for field in ["company_id","name","operating_jurisdiction","sector","last_login"]:
+                for field in [
+                    "company_id",
+                    "name",
+                    "operating_jurisdiction",
+                    "sector",
+                    "last_login",
+                ]:
                     if field in msg:
-                        errors_by_col[field] = errors_by_col.get(field,0) + 1
+                        errors_by_col[field] = errors_by_col.get(field, 0) + 1
                 logger.warning("Company row skipped: %s", e)
                 continue
 
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT OR IGNORE INTO company
                   (company_id,name,operating_jurisdiction,sector,last_login)
                 VALUES (?,?,?,?,?)
-            """, (
-                comp.company_id,
-                comp.name,
-                comp.operating_jurisdiction,
-                comp.sector,
-                comp.last_login.isoformat()
-            ))
+            """,
+                (
+                    comp.company_id,
+                    comp.name,
+                    comp.operating_jurisdiction,
+                    comp.sector,
+                    comp.last_login.isoformat(),
+                ),
+            )
             success += 1
 
     conn.commit()
     conn.close()
     return total, success, errors_by_col
 
+
 def insert_policies(db_path: str, csv_path: str):
     conn = sqlite3.connect(db_path)
-    cur  = conn.cursor()
+    cur = conn.cursor()
 
     total = sum(1 for _ in open(csv_path)) - 1
     success = 0
-    errors_by_col: Dict[str,int] = {}
+    errors_by_col: Dict[str, int] = {}
     with open(csv_path, newline="") as f:
         reader = csv.DictReader(f)
         for row in tqdm(reader, total=total, desc="Policies"):
@@ -113,52 +131,70 @@ def insert_policies(db_path: str, csv_path: str):
                 pol = Policy(**row)
             except Exception as e:
                 msg = str(e)
-                for field in ["id","name","geography","sectors","published_date",
-                              "updated_date","status","description","topics","source_url"]:
+                for field in [
+                    "id",
+                    "name",
+                    "geography",
+                    "sectors",
+                    "published_date",
+                    "updated_date",
+                    "status",
+                    "description",
+                    "topics",
+                    "source_url",
+                ]:
                     if field in msg:
-                        errors_by_col[field] = errors_by_col.get(field,0) + 1
+                        errors_by_col[field] = errors_by_col.get(field, 0) + 1
                 logger.warning("Policy row skipped: %s", e)
                 continue
 
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT OR IGNORE INTO policy
                   (policy_id,name,geography,sector,published_date,
                    updated_date,active,description,topics,source_url)
                 VALUES (?,?,?,?,?,?,?,?,?,?)
-            """, (
-                pol.policy_id,
-                pol.name,
-                pol.geography,
-                pol.sector,
-                pol.published_date.isoformat(),
-                pol.updated_date.isoformat(),
-                pol.active,
-                pol.description,
-                pol.topics_json(),
-                str(pol.source_url),
-            ))
+            """,
+                (
+                    pol.policy_id,
+                    pol.name,
+                    pol.geography,
+                    pol.sector,
+                    pol.published_date.isoformat(),
+                    pol.updated_date.isoformat(),
+                    pol.active,
+                    pol.description,
+                    pol.topics_json(),
+                    str(pol.source_url),
+                ),
+            )
             success += 1
 
     conn.commit()
     conn.close()
     return total, success, errors_by_col
 
+
 def color_code(rate: float) -> str:
-    if rate < 0.05:   return "GREEN"
-    if rate <= 0.20:  return "ORANGE"
+    if rate < 0.05:
+        return "GREEN"
+    if rate <= 0.20:
+        return "ORANGE"
     return "RED"
 
-def print_summary(table: str, total: int, success: int, errors: Dict[str,int]):
+
+def print_summary(table: str, total: int, success: int, errors: Dict[str, int]):
     print(f"\n=== {table} Summary ===")
     print(f"Total rows read   : {total}")
     print(f"Successfully saved: {success}")
     if errors:
         print("Column error rates:")
         for col, cnt in errors.items():
-            rate = cnt/total
+            rate = cnt / total
             print(f"  - {col:20s}: {cnt} errors / {rate:.1%} → {color_code(rate)}")
     else:
         print("No column‐level errors.")
+
 
 def main():
     configure_logging()
@@ -175,7 +211,8 @@ def main():
     elapsed = time.time() - start
     print(f"\nETL completed in {elapsed:.2f}s")
     print_summary("Companies", total_c, succ_c, err_c)
-    print_summary("Policies",  total_p, succ_p, err_p)
+    print_summary("Policies", total_p, succ_p, err_p)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()
