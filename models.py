@@ -19,12 +19,11 @@ and preprocessing for ETL into a relational database (e.g. PostgreSQL with JSONB
   • active: boolean (alias 'status')
   • description: plain text (HTML tags stripped)
   • topics: list of strings
-  • source_url: must return HTTP 200
+  • source_url: must return HTTP 200 (GET with redirects)
 
-Preprocessing steps ensure data integrity before insertion.
-Requires `pycountry`, `pydantic`, `shortuuid`, and `requests`.
+Preprocessing ensures data integrity before insertion. Requires
+`pycountry`, `pydantic v2`, `shortuuid`, and `requests`.
 """
-
 import logging
 import json
 import re
@@ -33,23 +32,24 @@ from datetime import date, datetime
 import pycountry
 import requests
 import shortuuid
-from pydantic import BaseModel, Field, validator, HttpUrl
+from pydantic import BaseModel, Field, field_validator, HttpUrl
 
 logger = logging.getLogger(__name__)
 
 
 def map_country(name: str) -> str:
-    """Turkey has changed its name in 2022
-    which is not present in the fuzzy search library"""
-
-    # TODO: Potentially use LLM to do mapping.
-    _manual = {"Turkey": "TR", "Türkiye": "TR"}
+    """
+    Map arbitrary country name to ISO3166 alpha-2 code,
+    with manual overrides for known mismatches.
+    """
+    manual = {"Turkey": "TR", "Türkiye": "TR"}
     try:
         return pycountry.countries.search_fuzzy(name)[0].alpha_2
     except Exception:
-        code = _manual.get(name.strip())
+        code = manual.get(name.strip())
         if code:
             return code
+        logger.error("Invalid country name: %s", name)
         raise ValueError(f"Invalid country name: {name}")
 
 
@@ -60,22 +60,22 @@ class Company(BaseModel):
     sector: str
     last_login: datetime
 
-    @validator("name", pre=True)
-    def non_empty_name(cls, v: str) -> str:
+    @field_validator("name", mode="before")
+    def validate_name(cls, v: str) -> str:
         v_str = v.strip()
         if not v_str:
-            raise ValueError("must be a non-empty string")
+            raise ValueError("name must be non-empty")
         return v_str
 
-    @validator("operating_jurisdiction", pre=True)
-    def map_operating_jurisdiction(cls, v: str) -> str:
+    @field_validator("operating_jurisdiction", mode="before")
+    def validate_jurisdiction(cls, v: str) -> str:
         return map_country(v)
 
-    @validator("sector", pre=True)
-    def non_empty_sector(cls, v: str) -> str:
+    @field_validator("sector", mode="before")
+    def validate_sector_company(cls, v: str) -> str:
         v_str = v.strip()
         if not v_str:
-            raise ValueError("sector must be a non-empty string")
+            raise ValueError("sector must be non-empty")
         return v_str
 
 
@@ -91,70 +91,62 @@ class Policy(BaseModel):
     topics: list[str]
     source_url: HttpUrl
 
-    @validator("name", pre=True)
-    def non_empty_policy_name(cls, v: str) -> str:
+    @field_validator("name", mode="before")
+    def validate_policy_name(cls, v: str) -> str:
         v_str = v.strip()
         if not v_str:
-            raise ValueError("must be a non-empty string")
+            raise ValueError("name must be non-empty")
         return v_str
 
-    @validator("geography", pre=True)
-    def map_geography(cls, v: str) -> str:
+    @field_validator("geography", mode="before")
+    def validate_geography(cls, v: str) -> str:
         return map_country(v)
 
-    @validator("sector", pre=True)
-    def non_empty_sector_policy(cls, v: str) -> str:
+    @field_validator("sector", mode="before")
+    def validate_sector_policy(cls, v: str) -> str:
         v_str = v.strip()
         if not v_str:
-            raise ValueError("sector must be a non-empty string")
+            raise ValueError("sector must be non-empty")
         return v_str
 
-    @validator("published_date", pre=True)
+    @field_validator("published_date", mode="before")
     def parse_published_date(cls, v: str) -> date:
         try:
             return datetime.strptime(v, "%d/%m/%Y").date()
         except Exception:
             raise ValueError(f"Invalid published_date format: {v}")
 
-    @validator("updated_date", pre=True)
+    @field_validator("updated_date", mode="before")
     def parse_updated_date(cls, v: str) -> datetime:
         try:
             return datetime.fromisoformat(v.replace("Z", "+00:00"))
         except Exception:
             raise ValueError(f"Invalid updated_date format: {v}")
 
-    @validator("active", pre=True)
+    @field_validator("active", mode="before")
     def parse_active(cls, v) -> bool:
         if isinstance(v, str):
             return v.strip().lower() == "active"
         return bool(v)
 
-    @validator("description", pre=True)
+    @field_validator("description", mode="before")
     def strip_html(cls, v: str) -> str:
-        text = re.sub(r"<[^>]+>", "", v)
-        return " ".join(text.split())
+        text = re.sub(r'<[^>]+>', '', v)
+        return ' '.join(text.split())
 
-    @validator("topics", pre=True)
+    @field_validator("topics", mode="before")
     def parse_topics(cls, v) -> list[str]:
-        try:
-            items = json.loads(v) if isinstance(v, str) else v
-            if isinstance(items, list):
-                return [s.strip() for s in items]
-        except Exception:
-            pass
-        raise ValueError("topics must be JSON list string or Python list")
+        items = json.loads(v) if isinstance(v, str) else v
+        if isinstance(items, list):
+            return [s.strip() for s in items]
+        raise ValueError("topics must be a JSON list or list of strings")
 
-    def topics_json(self) -> str:
-        return json.dumps(self.topics)
-
-    @validator("source_url")
+    @field_validator("source_url")
     def check_url(cls, v: HttpUrl) -> HttpUrl:
         try:
             resp = requests.get(str(v), timeout=5, allow_redirects=True)
             if resp.status_code != 200:
-                logger.warning(
-                    "Skipping URL %s: returned status %d", v, resp.status_code
-                )
+                logger.warning("Skipping URL %s: status %d", v, resp.status_code)
                 raise ValueError(f"URL returned status {resp.status_code}")
         except requests.RequestException as e:
             logger.warning("Skipping URL %s due to request error: %s", v, e)
@@ -163,3 +155,4 @@ class Policy(BaseModel):
 
     class Config:
         validate_by_name = True
+

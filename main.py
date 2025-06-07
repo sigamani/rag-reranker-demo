@@ -12,7 +12,6 @@ from typing import Dict
 from tqdm import tqdm
 from models import Company, Policy
 
-
 # configure logging as before, including file handler etl_errors.log...
 def configure_logging():
     root = logging.getLogger()
@@ -28,9 +27,7 @@ def configure_logging():
     root.addHandler(ch)
     root.addHandler(fh)
 
-
 logger = logging.getLogger(__name__)
-
 
 def ensure_db(path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -68,7 +65,6 @@ def ensure_db(path: str):
     conn.commit()
     conn.close()
 
-
 def insert_companies(db_path: str, csv_path: str):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -82,7 +78,6 @@ def insert_companies(db_path: str, csv_path: str):
             try:
                 comp = Company(**row)
             except Exception as e:
-                # parse which field failed
                 msg = str(e)
                 for field in [
                     "company_id",
@@ -115,7 +110,6 @@ def insert_companies(db_path: str, csv_path: str):
     conn.commit()
     conn.close()
     return total, success, errors_by_col
-
 
 def insert_policies(db_path: str, csv_path: str):
     conn = sqlite3.connect(db_path)
@@ -164,7 +158,7 @@ def insert_policies(db_path: str, csv_path: str):
                     pol.updated_date.isoformat(),
                     pol.active,
                     pol.description,
-                    pol.topics_json(),
+                    json.dumps(pol.topics),
                     str(pol.source_url),
                 ),
             )
@@ -174,14 +168,12 @@ def insert_policies(db_path: str, csv_path: str):
     conn.close()
     return total, success, errors_by_col
 
-
 def color_code(rate: float) -> str:
     if rate < 0.05:
         return "GREEN"
     if rate <= 0.20:
         return "ORANGE"
     return "RED"
-
 
 def print_summary(table: str, total: int, success: int, errors: Dict[str, int]):
     print(f"\n=== {table} Summary ===")
@@ -194,7 +186,6 @@ def print_summary(table: str, total: int, success: int, errors: Dict[str, int]):
             print(f"  - {col:20s}: {cnt} errors / {rate:.1%} → {color_code(rate)}")
     else:
         print("No column‐level errors.")
-
 
 def main():
     configure_logging()
@@ -212,7 +203,6 @@ def main():
     print(f"\nETL completed in {elapsed:.2f}s")
     print_summary("Companies", total_c, succ_c, err_c)
     print_summary("Policies", total_p, succ_p, err_p)
-
 
 if __name__ == "__main__":
     main()
