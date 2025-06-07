@@ -1,6 +1,10 @@
-black
-pandas>=1.5.2                # DataFrame manipulation, ETL operations 
-psycopg2-binary>=2.9         # PostgreSQL client library (binary distribution) 
-SQLAlchemy>=1.4              # Python SQL toolkit and ORM for df.to_sql()  
-pytest>=7.0                  # Test framework for writing and running ETL tests  
-python-dotenv>=1.0.0         # (Optional) Load environment variables from .env files 
+pandas==2.3.0
+pydantic==2.11.5
+pycountry==24.6.1
+python-dotenv==1.1.0
+pytest==8.4.0
+psycopg2-binary==2.9.10
+requests==2.30.0
+shortuuid==1.0.13
+SQLAlchemy==2.0.41
+tqdm==4.67.1

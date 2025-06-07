@@ -1,24 +1,20 @@
-# main.py
-
 import os
 import csv
 import json
 import logging
 import sqlite3
 import time
-from datetime import datetime
 from typing import Dict
 
 from tqdm import tqdm
-from models import Company, Policy
+from utils.models import Company, Policy
 
-# configure logging as before, including file handler etl_errors.log...
 def configure_logging():
     root = logging.getLogger()
-    root.setLevel(logging.INFO)
+    root.setLevel(logging.WARNING)
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
-    fh = logging.FileHandler("etl_errors.log", mode="w")
+    fh = logging.FileHandler("logs/etl_errors.log", mode="a")
     fh.setLevel(logging.WARNING)
     fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
     ch.setFormatter(fmt)
@@ -194,9 +190,7 @@ def main():
 
     ensure_db(db)
 
-    # Companies
     total_c, succ_c, err_c = insert_companies(db, "data/company_data.csv")
-    # Policies
     total_p, succ_p, err_p = insert_policies(db, "data/random_policies.csv")
 
     elapsed = time.time() - start
@@ -204,5 +198,28 @@ def main():
     print_summary("Companies", total_c, succ_c, err_c)
     print_summary("Policies", total_p, succ_p, err_p)
 
+
+def register_views(db_path: str, sql_file: str = "create_views.sql"):
+    conn = sqlite3.connect(db_path)
+    cur  = conn.cursor()
+    with open(sql_file, "r") as f:
+        cur.executescript(f.read())
+    conn.commit()
+    conn.close()
+
+def fetch_relevant(db_path: str):
+    conn = sqlite3.connect(db_path)
+    cur  = conn.cursor()
+    cur.execute("SELECT * FROM relevant_policies;")
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
 if __name__ == "__main__":
     main()
+    #db = "data/maiven.db"
+    #ensure_db(db)           # your existing table‐creation
+    #register_views(db)      # registers the relevant_policies view
+
+    #d = fetch_relevant(db)
+    #print(d)
