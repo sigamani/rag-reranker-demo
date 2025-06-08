@@ -51,13 +51,11 @@ The pipeline does a row by row insert which is pretty suboptimal for large datas
 The code is structured to be modular, with separate files for each major component (e.g., `company.py`, `policy.py`, `etl.py`, `main.py`). This separation of concerns makes it easier to maintain and extend the codebase as new requirements arise. Each module has a clear responsibility, which I tried to align with general "best practices" in software development, "best practice" in reality from my experience tends to be more of an ever-changing conversation between the team itself trying to adapt to buisness goals.
 Finally, I kept a simple CI/CD workflow via https://github.com/sigamani/maiven-practical/actions/runs/15519060415/job/43689796519, where everything is sequential from main.py, complemented by pytest unit tests and a GitHub Actions CI workflow. I found that to be a good first step when prototyping not least that, it helps me to debug locally on my own as well catching things like [this].(https://github.com/sigamani/maiven-practical/actions/runs/15518741052/job/43689082781). Scaling out I would be very tempted to use an orchestration like Dagster (I saw it in the tool stack for Maiven and it's been a lifesaver for me in previous companies). 
 
-However, I decided that it was overkill for this exercise, and potentially not worth it even if one did want to scale out this system anyway.
-
- Steps
-	1	Refactor to simplify and mitigate technical debt
- 	2	PDF parsing downloads to avoid http requests and have a localised datalake 
-  	3	Public Data Exploration (find more data publically available)
-	4	Explore other database options (dependend on predicted load and business direction). i.e. postgres, vector store, graph db? Batch loads or switch to an ORM for high-volume inserts
-	5.	Orchestration Layer (potentially) i.e. Dagster 
-	6.	Embedding description using LLM and adding that as a metric
-	7.	Defining KPI's that align buisness and data science (Precision/Recall@X, NDCG, MRR, cosine similarity metrics for fuzzy matching, correlations wrt ground truth-need to define)
+However, I decided that it was overkill for this exercise, and potentially not worth it even if one did want to scale out this system anyway. Things I would add if I had more time:
+- Refactor to simplify and mitigate technical debt
+- PDF parsing downloads to avoid http requests and have a localised datalake 
+- Public Data Exploration (find more data publically available)
+- Explore other database options (dependend on predicted load and business direction). i.e. postgres, vector store, graph db? Batch loads or switch to an ORM for high-volume inserts
+- Orchestration Layer (potentially) i.e. Dagster 
+- Embedding description using LLM and adding that as a metric
+- Defining KPI's that align buisness and data science (Precision/Recall@X, NDCG, MRR, cosine similarity metrics for fuzzy matching, correlations wrt ground truth-need to define)
