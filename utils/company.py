@@ -1,40 +1,39 @@
 import logging
 from datetime import datetime
-
 from pydantic.dataclasses import dataclass
-from pydantic import  field_validator
-from utils.helpers import non_empty_str, map_country_code
+from pydantic import field_validator
+from utils.helpers import map_country_code
 
 logger = logging.getLogger(__name__)
 
 @dataclass
 class Company:
-    company_id: int
+    company_id: str
     name: str
     operating_jurisdiction: str
     sector: str
-    last_login: datetime  # ISO-8601 parsed natively by Pydantic
+    last_login: datetime
 
-    @field_validator("name", mode="before")
-    def _validate_name(cls, v: str) -> str:
+    @field_validator("company_id", mode="before")
+    def ensure_non_empty_id(cls, v: str) -> str:
+        if not v or not v.strip():
+            logger.warning("Empty company_id encountered")
+            raise ValueError("company_id cannot be empty")
+        return v.strip()
+
+    @field_validator("last_login", mode="before")
+    def parse_last_login(cls, v: str) -> datetime:
+        # Expecting ISO format or timestamp
         try:
-            return non_empty_str(v, "name")
-        except Exception as e:
-            logger.warning("Company.name validation failed: %s", e)
-            raise
+            return datetime.fromisoformat(v)
+        except Exception:
+            # fallback to common datetime parse
+            from dateutil import parser
+            return parser.parse(v)
 
     @field_validator("operating_jurisdiction", mode="before")
-    def _validate_jurisdiction(cls, v: str) -> str:
-        try:
-            return map_country_code(v)
-        except Exception as e:
-            logger.warning("Company.operating_jurisdiction mapping failed: %s", e)
-            raise
-
-    @field_validator("sector", mode="before")
-    def _validate_sector(cls, v: str) -> str:
-        try:
-            return non_empty_str(v, "sector")
-        except Exception as e:
-            logger.warning("Company.sector validation failed: %s", e)
-            raise
+    def ensure_non_empty_jurisdiction(cls, v: str) -> str:
+        if not v or not v.strip():
+            logger.warning("Empty operating_jurisdiction encountered")
+            raise ValueError("operating_jurisdiction cannot be empty")
+        return map_country_code(v.strip())

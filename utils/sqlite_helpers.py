@@ -1,14 +1,14 @@
 import os
-import csv
-import json
-import sqlite3
-import logging
+import csv, sqlite3, json
 from typing import Dict, Tuple
-
 from tqdm import tqdm
+from pydantic import ValidationError
+
 from utils.company import Company
 from utils.policy import Policy
-from pydantic import ValidationError
+
+import logging
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -65,19 +65,22 @@ def insert_companies(db_path: str, csv_path: str) -> Tuple[int, int, Dict[str,in
     conn.close()
     return total, success, errors_by_col
 
+
 def insert_policies(db_path: str, csv_path: str) -> Tuple[int, int, Dict[str,int]]:
     conn = sqlite3.connect(db_path)
     cur  = conn.cursor()
 
+    total = 0
+    success = 0
     errors_by_col: Dict[str,int] = {}
 
     with open(csv_path, newline="") as f:
-        rows = list(csv.DictReader(f))
-        total = len(rows)
-        success = 0
-        for row in tqdm(rows, total=total, desc="Policies"):
+        reader = csv.DictReader(f)
+        # wrap reader in tqdm without a total
+        for row in tqdm(reader, desc="Policies"):
+            total += 1
             data = {
-                "id":            row["id"],
+                "policy_id":     row["id"],
                 "name":          row["name"],
                 "geography":     row["geography"],
                 "sectors":       row["sectors"],
@@ -91,13 +94,10 @@ def insert_policies(db_path: str, csv_path: str) -> Tuple[int, int, Dict[str,int
             try:
                 pol = Policy(**data)
             except ValidationError as e:
-                for err in e.model_dump()["__pydantic_errors__"]:
+                for err in e.errors():
                     loc = err["loc"][0]
                     errors_by_col[loc] = errors_by_col.get(loc, 0) + 1
                 logger.warning("Policy row skipped: %s", e)
-                continue
-            except Exception as e:
-                logger.warning("Policy row skipped (unexpected): %s", e)
                 continue
 
             cur.execute(
@@ -108,7 +108,7 @@ def insert_policies(db_path: str, csv_path: str) -> Tuple[int, int, Dict[str,int
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    pol.id,
+                    pol.policy_id,
                     pol.name,
                     pol.geography,
                     pol.sectors,
@@ -121,10 +121,6 @@ def insert_policies(db_path: str, csv_path: str) -> Tuple[int, int, Dict[str,int
                 ),
             )
             success += 1
-    total = len(rows)
-    if total == 0:
-        logger.warning("No policies found in CSV file.")
-        return 0, 0, errors_by_col
 
     conn.commit()
     conn.close()

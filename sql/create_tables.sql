@@ -10,7 +10,7 @@ CREATE TABLE company (
 );
 
 CREATE TABLE policy (
-  id            TEXT PRIMARY KEY,
+  id            INTEGER PRIMARY KEY,
   name            TEXT NOT NULL,
   geography     TEXT NOT NULL,
   sectors        TEXT NOT NULL,

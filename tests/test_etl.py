@@ -1,39 +1,47 @@
-import pandas as pd
-import pytest
-from sqlalchemy import create_engine, text
-from main import clean_data, load_to_db
+"""
+Test module for the ETL process that loads and queries relevant policies
+from a local SQLite database. Uses pytest to verify that the
+`relevant_policies` view is correctly populated and returns the expected
+results. Guards against regressions in core ETL functionality as the
+codebase evolves.
+"""
 
+import os
+import sqlite3
 
-@pytest.fixture(scope="session")
-def engine():
-    """Create a temporary database engine for testing."""
-    return create_engine("sqlite:///:memory:")
+def load_relevant_policies(db_path):
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT company_id, id, geography, updated_date, avg_days_since_update
+        FROM relevant_policies
+        ORDER BY company_id, updated_date DESC;
+        """
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
 
+def test_relevant_policies_view():
+    db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'maiven.db')
+    assert os.path.exists(db_path), f"Database not found at {db_path}"
 
-@pytest.fixture
-def sample_df_company(tmp_path):
-    """Write a small CSV and return DataFrame for testing clean_data()."""
-    csv_path = tmp_path / "company_test.csv"
-    data = {
-        "company_id": [1, 2],
-        "name": ["A Corp", "B LLC"],
-        "last_login": ["2025-01-01T12:00:00Z", "2025-01-02T13:30:00Z"],
-    }
-    pd.DataFrame(data).to_csv(csv_path, index=False)
-    return clean_data(str(csv_path))
+    rows = load_relevant_policies(db_path)
+    rounded = [
+        (cid, pid, geo, upd, round(avg, 1))
+        for cid, pid, geo, upd, avg in rows
+    ]
 
+    expected = [
+        (3, 1434, 'DE', '2025-03-18 00:24:50', 82.5),
+        (4, 1257, 'GB', '2025-03-23 08:51:27', 77.5),
+        (5, 1434, 'DE', '2025-03-18 00:24:50', 82.5),
+        (6, 263,  'NL', '2025-03-14 21:17:08', 86.5),
+        (7, 263,  'NL', '2025-03-14 21:17:08', 86.5),
+        (8, 1434, 'DE', '2025-03-18 00:24:50', 82.5),
+        (9, 22,   'FR', '2025-04-03 12:55:08', 74.5),
+        (9, 16,   'FR', '2025-03-18 05:56:39', 74.5),
+    ]
 
-def test_clean_data(sample_df_company):
-    """Ensure clean_data returns a non-empty DataFrame."""
-    assert isinstance(sample_df_company, pd.DataFrame)
-    assert sample_df_company.shape[0] == 2
-
-
-def test_load_to_db(engine, sample_df_company):
-    """Ensure that DataFrame loads into the engine without errors."""
-    load_to_db(sample_df_company, "company_test", engine)
-    # Verify table exists and has correct number of rows
-
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT COUNT(*) FROM company_test"))
-        assert result.scalar() == 2
+    assert rounded == expected

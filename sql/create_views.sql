@@ -14,7 +14,7 @@ WITH
     FROM policy p
     JOIN company c
       ON p.geography = c.operating_jurisdiction
-    WHERE p.status = 'active'
+    WHERE p.status = 1
       AND date(p.updated_date) >= date('now','-100 days')
   ),
 
@@ -24,7 +24,7 @@ WITH
       AVG( julianday('now') - julianday(date(updated_date)) ) 
         AS avg_days_since_update
     FROM policy
-    WHERE status is 'active'
+    WHERE status is 1
       AND date(updated_date) >= date('now','-365 days')
     GROUP BY geography
   )
