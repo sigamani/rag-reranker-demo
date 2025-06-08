@@ -1,4 +1,4 @@
-# Maiven Practical ETL
+# Maiven Practical 
 
 ## Prerequisites
 
@@ -39,39 +39,25 @@
 ---
 
 - **Notes**
-The idea behind the design here was imagining how I would present a hypothetical end-to-end ETL proof-of-concept for ingesting, validating, and storing Maiven’s policy and company data (assuming it follows the structure provided). Some motivations for the choices I made are as follows: I intentionally chose SQLite because of its setup and ease of testing. It was a close call between that an postgreSQL, but postgreSQL doesn't support an in memory persistant copy, and I cant write out to a small db file locally (which was important to me in terms of the balance between ease of setup compared to what a production grade environment would look like). In a production environment handling hundreds of thousands of records, I would motivate to switch to PostgreSQL (via psycopg2.connect) which would be trivial given both follow very similar implementations. I spent some time considering the trade-offs between a relational DB, what I eventually went with or a document level (mongo-atlas, jsonl) which would lend itself well to machine learning tasks concerning text. A hybrid approach would probably be the most suitable as certain fields like "description" and "topics" are more suited to this. However I kept it simple for now seeing as I was able to do what I needed with a relational DB. I placed a lot of emphasis on data validation, where I chose to use pydantic models to validate columns. This is
+This repository demonstrates a prototype end-to-end ETL pipeline for ingesting, validating, and storing Maiven’s policy and company data. For simplicity and because our sample sets contain only 10 and 50 rows, I chose SQLite (via sqlite3.connect) to keep everything self-contained and easily testable. In production—where we might process hundreds of thousands of records—I’d switch to PostgreSQL (psycopg2.connect) with minimal changes, since both follow the Python DB-API cursor pattern.
 
-Highlights
-	•	Pydantic-powered validation
-Mirrors a production-grade, Pythonic workflow.
-	•	Recasts policy_id into an 8-byte integer
-	•	Strict HttpUrl checks with URL-resolution alerts
-	•	“Green/Orange/Red” severity flags guard against over- or under-strict filtering
-	•	Schema & performance considerations
-	•	Defined primary keys for O(1) lookups
-	•	Row-by-row inserts are fine for our sample size; in V2 we’d batch or use an ORM like SQLAlchemy
-	•	Dynamic fields (e.g. sector lists) are stored as JSON strings today; a document store or JSONL table may suit ML workflows better
-	•	“Build-fast, iterate-later” mindset
-You’ll spot some intentional trade-offs:
-	•	Near-duplicate insert_company() / insert_policy() routines (candidates for consolidation)
-	•	Over-engineered date/datetime parsing via Pydantic v2 TypeAdapters (regex-free, but verbose)
-	•	Modular code structure
-	•	company.py, policy.py, etl.py, main.py each own a clear responsibility
-	•	Easily extendable as new requirements emerge
-	•	CI/CD & testing
-	•	GitHub Actions workflow runs main.py end-to-end and enforces a custom pytest suite
-	•	Captures failures early—including parsing regressions and view-definition changes
-	•	View latest CI run
+I layered in Pydantic validations to mirror a production-grade, Pythonic workflow and guard data integrity early. Key fields have been recast (e.g., policy_id to an 8-byte integer) and primary keys defined for efficient lookups. My error handling flags URL-resolution failures and missing fields, with a simple “green/orange/red” alert system to balance strictness against data salvageability. Full end-to-end PDF parsing and cross-document consistency checks would be next, but were outside this exercise’s scope.
 
-Next Steps
-	1.	Scale-Up
-	•	Migrate to PostgreSQL (or specialized time-series store)
-	•	Batch loads or switch to an ORM for high-volume inserts
-	2.	Refactor
-	•	DRY up redundant insert routines
-	•	Consolidate Pydantic adapters for date parsing
-	3.	Orchestration
-	•	Evaluate Dagster or Airflow for robust pipeline scheduling
-	4.	Deep Data QA
-	•	Full PDF parsing → extract & cross-validate metadata
-	•	Schema evolution & data lineage tracking
+I opted not to introduce Pandas—although it excels at exploratory ETL—because our data volume and structure are straightforward. A context manager plus Pydantic and structured logging has proven more than adequate. Down the road, a document store or a JSONL table might better model our dynamic sectors lists, especially as we scale into ML workflows (e.g., Huggingface’s Transformers). 
+
+You’ll notice that much of the code here was built under the “build-fast, iterate-later” mantra—my primary goal was to use the exercise as if I were presenting to the company to motivate having a fully working prototype ETL pipeline that could be productionized in a hypothetical V2 (where there’d be handling hundreds of thousands of policies, and our retrieval logic would certainly evolve past a simple SQL join). That means you’ll see a few “hacky” and duplicated parts—like two almost-identical insert_company() / insert_policy() routines that could easily collapse into one, or some redundant validation logic in policy.py. I opted to use the latest and greatest from Pydantic v2’s new TypeAdapter API to parse both dates and datetimes in one shot (rather than stripping off trailing Z’s with regex), instead of using the older library which would have been easier. I probably over-engineered it, or implemented it inefficiently since it looks a bit monstrous for a fairly simple thing. If I had more time I’d refactor out those redundancies, consolidate validation under a single reusable adapter (if possible), and more importantly move from SQLite to something like Postgres (or a purpose-built time-series store) to handle scale and speed.
+
+The pipeline does a row by row insert which is pretty suboptimal for large datasets, but given the small size of our sample data, it’s sufficient for this prototype. In a production scenario, I’d batch inserts or use an ORM like SQLAlchemy to optimize performance and maintainability. I also added a simple logging setup to capture key events and errors, which is crucial for debugging and monitoring in production. The logging is basic but can be easily extended to include more detailed information or integrate with a centralized logging system.
+The code is structured to be modular, with separate files for each major component (e.g., `company.py`, `policy.py`, `etl.py`, `main.py`). This separation of concerns makes it easier to maintain and extend the codebase as new requirements arise. Each module has a clear responsibility, which I tried to align with general "best practices" in software development, "best practice" in reality from my experience tends to be more of an ever-changing conversation between the team itself trying to adapt to buisness goals.
+Finally, I kept a simple CI/CD workflow via https://github.com/sigamani/maiven-practical/actions/runs/15519060415/job/43689796519, where everything is sequential from main.py, complemented by pytest unit tests and a GitHub Actions CI workflow. I found that to be a good first step when prototyping not least that, it helps me to debug locally on my own as well catching things like [this].(https://github.com/sigamani/maiven-practical/actions/runs/15518741052/job/43689082781). Scaling out I would be very tempted to use an orchestration like Dagster (I saw it in the tool stack for Maiven and it's been a lifesaver for me in previous companies). 
+
+However, I decided that it was overkill for this exercise, and potentially not worth it even if one did want to scale out this system anyway.
+
+ Steps
+	1	Refactor to simplify and mitigate technical debt
+ 	2	PDF parsing downloads to avoid http requests and have a localised datalake 
+  	3	Public Data Exploration (find more data publically available)
+	4	Explore other database options (dependend on predicted load and business direction). i.e. postgres, vector store, graph db? Batch loads or switch to an ORM for high-volume inserts
+	5.	Orchestration Layer (potentially) i.e. Dagster 
+	6.	Embedding description using LLM and adding that as a metric
+	7.	Defining KPI's that align buisness and data science (Precision/Recall@X, NDCG, MRR, cosine similarity metrics for fuzzy matching, correlations wrt ground truth-need to define)
