@@ -3,12 +3,12 @@ import csv
 import json
 import sqlite3
 import logging
-from typing import Dict
+from typing import Dict, Tuple
 
 from tqdm import tqdm
 from utils.company import Company
 from utils.policy import Policy
-from dataclasses import fields
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -17,37 +17,36 @@ def load_sql(path: str) -> str:
         return f.read()
 
 def ensure_db(db_path: str, ddl_sql_path: str):
-    """Create (or recreate) company & policy tables from SQL file."""
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.executescript(load_sql(ddl_sql_path))
     conn.close()
 
-def insert_companies(db_path: str, csv_path: str) -> (int, int, Dict[str,int]):
+def insert_companies(db_path: str, csv_path: str) -> Tuple[int, int, Dict[str,int]]:
     conn = sqlite3.connect(db_path)
     cur  = conn.cursor()
 
-    total = sum(1 for _ in open(csv_path)) - 1
-    success = 0
+    total, success = 0, 0
     errors_by_col: Dict[str,int] = {}
 
-    with open(csv_path, newline="") as f:
-        reader = csv.DictReader(f)
-        for row in tqdm(reader, total=total, desc="Companies"):
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+        total = len(rows)
+        success = 0
+
+        for row in tqdm(rows, total=total, desc="Companies"):
             try:
                 comp = Company(**row)
             except Exception as e:
                 msg = str(e)
-                for field in ("company_id","name",
-                              "operating_jurisdiction",
-                              "sector","last_login"):
+                for field in ("company_id","name","operating_jurisdiction","sector","last_login"):
                     if field in msg:
                         errors_by_col[field] = errors_by_col.get(field,0) + 1
                 logger.warning("Company row skipped: %s", e)
                 continue
 
             cur.execute(
-                """
+            """
                 INSERT OR IGNORE INTO company
                   (company_id, name, operating_jurisdiction, sector, last_login)
                 VALUES (?, ?, ?, ?, ?)
@@ -66,61 +65,77 @@ def insert_companies(db_path: str, csv_path: str) -> (int, int, Dict[str,int]):
     conn.close()
     return total, success, errors_by_col
 
-
-def insert_policies(db_path: str, csv_path: str):
+def insert_policies(db_path: str, csv_path: str) -> Tuple[int, int, Dict[str,int]]:
     conn = sqlite3.connect(db_path)
     cur  = conn.cursor()
 
-    total = sum(1 for _ in open(csv_path)) - 1
-    success = 0
     errors_by_col: Dict[str,int] = {}
 
     with open(csv_path, newline="") as f:
-        reader = csv.DictReader(f)
-        for row in tqdm(reader, total=total, desc="Policies"):
+        rows = list(csv.DictReader(f))
+        total = len(rows)
+        success = 0
+        for row in tqdm(rows, total=total, desc="Policies"):
+            data = {
+                "id":            row["id"],
+                "name":          row["name"],
+                "geography":     row["geography"],
+                "sectors":       row["sectors"],
+                "published_date":row["published_date"],
+                "updated_date":  row["updated_date"],
+                "status":        row["status"],
+                "description":   row["description"],
+                "topics":        row["topics"],
+                "source_url":    row["source_url"],
+            }
             try:
-                pol = Policy(**row)
+                pol = Policy(**data)
+            except ValidationError as e:
+                for err in e.model_dump()["__pydantic_errors__"]:
+                    loc = err["loc"][0]
+                    errors_by_col[loc] = errors_by_col.get(loc, 0) + 1
+                logger.warning("Policy row skipped: %s", e)
+                continue
             except Exception as e:
+                logger.warning("Policy row skipped (unexpected): %s", e)
                 continue
 
-            try:
-                cur.execute(
-                    """
-                    INSERT OR IGNORE INTO policy
-                      (policy_id,name,geography,sector,published_date,
-                       updated_date,active,description,topics,source_url)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)
-                    """,
-                    (
-                        pol.policy_id,
-                        pol.name,
-                        pol.geography,
-                        pol.sector,
-                        pol.published_date.strftime("%Y-%m-%d"),
-                        pol.updated_date.strftime("%Y-%m-%d %H:%M:%S"),
-                        1 if pol.active else 0,    # ← boolean → int
-                        pol.description,
-                        json.dumps(pol.topics),
-                        str(pol.source_url),
-                    ),
-                )
-                success += 1
-            except sqlite3.IntegrityError as ie:
-                logger.error("Failed to INSERT policy %r: %s", pol.policy_id, ie)
-                errors_by_col['db_insert'] = errors_by_col.get('db_insert', 0) + 1
+            cur.execute(
+                """
+                INSERT INTO policy
+                  (id, name, geography, sectors, published_date,
+                   updated_date, status, description, topics, source_url)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    pol.id,
+                    pol.name,
+                    pol.geography,
+                    pol.sectors,
+                    pol.published_date.strftime("%Y-%m-%d"),
+                    pol.updated_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    pol.status,
+                    pol.description,
+                    json.dumps(pol.topics),
+                    str(pol.source_url),
+                ),
+            )
+            success += 1
+    total = len(rows)
+    if total == 0:
+        logger.warning("No policies found in CSV file.")
+        return 0, 0, errors_by_col
 
     conn.commit()
     conn.close()
     return total, success, errors_by_col
 
 def register_views(db_path: str, view_sql_path: str):
-    """Read a .sql file and execute it to create views."""
     conn = sqlite3.connect(db_path)
     conn.executescript(load_sql(view_sql_path))
     conn.close()
 
 def fetch_relevant(db_path: str):
-    """Return all rows from the relevant_policies view."""
     conn = sqlite3.connect(db_path)
     cur  = conn.cursor()
     cur.execute("SELECT * FROM relevant_policies;")

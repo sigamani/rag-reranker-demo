@@ -1,42 +1,37 @@
 PRAGMA foreign_keys = ON;
 
--- Drop the view if it already exists
 DROP VIEW IF EXISTS relevant_policies;
 
--- Create a view to expose “relevant policies” per company
 CREATE VIEW relevant_policies AS
 WITH
-  -- 1) recent policies matching geo & recency
   recent_policies AS (
     SELECT
-      p.policy_id,
+      p.id,
       p.geography,
       p.updated_date,
-      p.active,
+      p.status,
       c.company_id
     FROM policy p
     JOIN company c
       ON p.geography = c.operating_jurisdiction
-    WHERE p.active = 1
+    WHERE p.status = 'active'
       AND date(p.updated_date) >= date('now','-100 days')
   ),
 
-  -- 2) per‐geography average days‐since‐last‐update over past year
   avg_past_year AS (
     SELECT
       geography,
       AVG( julianday('now') - julianday(date(updated_date)) ) 
         AS avg_days_since_update
     FROM policy
-    WHERE active = 1
+    WHERE status is 'active'
       AND date(updated_date) >= date('now','-365 days')
     GROUP BY geography
   )
 
--- 3) final projection
 SELECT
   rp.company_id,
-  rp.policy_id,
+  rp.id,
   rp.geography,
   rp.updated_date,
   apy.avg_days_since_update

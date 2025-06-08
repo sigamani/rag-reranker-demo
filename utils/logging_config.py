@@ -7,7 +7,6 @@ def configure_logging():
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
 
-    # create and add a file handler
     fh = logging.FileHandler("logs/etl_errors.log", mode="a")
     fh.setLevel(logging.WARNING)
 

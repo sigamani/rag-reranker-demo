@@ -1,5 +1,4 @@
 import logging
-import pycountry
 from datetime import datetime
 
 from pydantic.dataclasses import dataclass
