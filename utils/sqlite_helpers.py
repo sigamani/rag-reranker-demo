@@ -67,7 +67,7 @@ def insert_companies(db_path: str, csv_path: str) -> (int, int, Dict[str,int]):
     return total, success, errors_by_col
 
 
-def insert_policies(db_path: str, csv_path: str) -> (int, int, Dict[str, int]):
+def insert_policies(db_path: str, csv_path: str):
     conn = sqlite3.connect(db_path)
     cur  = conn.cursor()
 
@@ -81,35 +81,33 @@ def insert_policies(db_path: str, csv_path: str) -> (int, int, Dict[str, int]):
             try:
                 pol = Policy(**row)
             except Exception as e:
-                msg = str(e)
-                expected = {f.name for f in fields(Policy)}
-                for fld in expected:
-                    if fld in msg:
-                        errors_by_col[fld] = errors_by_col.get(fld, 0) + 1
-                logger.warning("Policy row skipped: %s", e)
                 continue
 
-            cur.execute(
-                """
-                INSERT OR IGNORE INTO policy
-                  (policy_id, name, geography, sector, published_date,
-                   updated_date, active, description, topics, source_url)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    pol.policy_id,
-                    pol.name,
-                    pol.geography,
-                    pol.sector,
-                    pol.published_date.strftime("%Y-%m-%d"),
-                    pol.updated_date.strftime("%Y-%m-%d %H:%M:%S"),
-                    pol.active,
-                    pol.description,
-                    json.dumps(pol.topics),
-                    str(pol.source_url),
-                ),
-            )
-            success += 1
+            try:
+                cur.execute(
+                    """
+                    INSERT OR IGNORE INTO policy
+                      (policy_id,name,geography,sector,published_date,
+                       updated_date,active,description,topics,source_url)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        pol.policy_id,
+                        pol.name,
+                        pol.geography,
+                        pol.sector,
+                        pol.published_date.strftime("%Y-%m-%d"),
+                        pol.updated_date.strftime("%Y-%m-%d %H:%M:%S"),
+                        1 if pol.active else 0,    # ← boolean → int
+                        pol.description,
+                        json.dumps(pol.topics),
+                        str(pol.source_url),
+                    ),
+                )
+                success += 1
+            except sqlite3.IntegrityError as ie:
+                logger.error("Failed to INSERT policy %r: %s", pol.policy_id, ie)
+                errors_by_col['db_insert'] = errors_by_col.get('db_insert', 0) + 1
 
     conn.commit()
     conn.close()

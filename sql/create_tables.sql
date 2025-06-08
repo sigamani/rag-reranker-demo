@@ -1,26 +1,25 @@
--- Drop existing tables
-DROP TABLE IF EXISTS policy;
-DROP TABLE IF EXISTS company;
 
--- Create company table
+DROP TABLE IF EXISTS company;
+DROP TABLE IF EXISTS policy;
+
 CREATE TABLE company (
-  company_id INTEGER PRIMARY KEY,
-  name TEXT,
+  company_id           INTEGER PRIMARY KEY,
+  name                 TEXT,
   operating_jurisdiction TEXT,
-  sector TEXT,
-  last_login TIMESTAMP
+  sector               TEXT,
+  last_login           TIMESTAMP
 );
 
--- Create policy table
 CREATE TABLE policy (
-  policy_id TEXT PRIMARY KEY,
-  name TEXT,
-  geography TEXT,
-  sector TEXT,
-  published_date DATE,
-  updated_date TIMESTAMP,
-  active BOOLEAN,
-  description TEXT,
-  topics TEXT,
-  source_url TEXT
+  policy_id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  raw_id               TEXT    UNIQUE,
+  name                 TEXT,
+  geography            TEXT,
+  sector               TEXT,
+  published_date       DATE,
+  updated_date         TIMESTAMP,
+  active               BOOLEAN,
+  description          TEXT,
+  topics               TEXT,
+  source_url           TEXT
 );

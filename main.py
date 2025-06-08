@@ -2,7 +2,7 @@
 import time
 import logging
 from utils.policy import Policy
-from logs.logging_config import configure_logging
+from utils.logging_config import configure_logging
 from utils.sqlite_helpers import (
     ensure_db,
     insert_companies,
