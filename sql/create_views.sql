@@ -1,5 +1,3 @@
--- create_views.sql
-
 PRAGMA foreign_keys = ON;
 
 -- Drop the view if it already exists
