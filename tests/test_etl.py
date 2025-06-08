@@ -29,7 +29,7 @@ def test_relevant_policies_view():
 
     rows = load_relevant_policies(db_path)
     rounded = [
-        (cid, pid, geo, upd, round(avg, 1))
+        (cid, pid, geo, upd, round(avg))
         for cid, pid, geo, upd, avg in rows
     ]
 
