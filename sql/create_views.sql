@@ -21,7 +21,7 @@ WITH
   avg_past_year AS (
     SELECT
       geography,
-      CAST(AVG( julianday('now') - julianday(date(updated_date)) AS INTEGER) 
+      CAST(AVG(julianday('now') - julianday(updated_date)) AS INTEGER) 
         AS avg_days_since_update
     FROM policy
     WHERE status is 1
