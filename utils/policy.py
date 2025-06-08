@@ -2,15 +2,21 @@ import re
 import json
 import logging
 import requests
-from datetime import date, datetime
+from datetime import datetime, date
 from typing import List
 from pydantic.dataclasses import dataclass
 from pydantic import Field, field_validator, HttpUrl
 from requests.exceptions import RequestException, SSLError
 from utils.helpers import non_empty_str, strip_html_tags, map_country_code
-from typing import Literal
 
+from datetime import datetime
+from pydantic import field_validator
+from pydantic import field_validator, parse_obj_as
 logger = logging.getLogger(__name__)
+
+from pydantic import field_validator, TypeAdapter
+_date_adapter = TypeAdapter(date)
+_datetime_adapter = TypeAdapter(datetime)
 
 @dataclass(config={"populate_by_name": True})
 class Policy:
@@ -76,11 +82,20 @@ class Policy:
 
     @field_validator("published_date", mode="before")
     def parse_pub_date(cls, v):
-        return datetime.strptime(v, "%d/%m/%Y").date()
+        # first your custom dd/mm/YYYY, then fallback to Pydantic
+        if isinstance(v, str):
+            try:
+                return datetime.strptime(v, "%d/%m/%Y").date()
+            except ValueError:
+                return _date_adapter.validate_python(v)
+        return v
 
     @field_validator("updated_date", mode="before")
     def parse_updated_date(cls, v):
-        return datetime.fromisoformat(v)
+        # let Pydantic handle any ISO-3339, “Z”-suffix, offsets, etc.
+        if isinstance(v, str):
+            return _datetime_adapter.validate_python(v)
+        return v
 
     @field_validator("description", mode="before")
     def _strip_description(cls, v: str) -> str:
