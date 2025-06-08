@@ -23,12 +23,14 @@ This repository contains an end-to-end ETL pipeline that ingests company and pol
   ```python main.py```
 
 - **You should see what's below in your terminal output:**
-  ```Companies: 10/10 succeeded (100.0%)
-Policies: 50/50 succeeded (100.0%)
+  ```bash
+  Companies: 10/10 succeeded (100.0%)
+  Policies: 50/50 succeeded (100.0%)
 
-Relevant policies by company:
-company_id | policy_id | geography | updated_date         | avg_days
--------------------------------------------------------------------
-3          | 1434      | DE        | 2025-03-18 00:24:50  | 82.5
-4          | 1257      | GB        | 2025-03-23 08:51:27  | 77.5
-… etc.```
+  Relevant policies by company:
+  company_id | policy_id | geography | updated_date         | avg_days
+  -------------------------------------------------------------------
+  3          | 1434      | DE        | 2025-03-18 00:24:50  | 82.5
+  4          | 1257      | GB        | 2025-03-23 08:51:27  | 77.5
+  ```
+and so on ...
