@@ -1,28 +1,26 @@
-name: CI
+name: ETL workflow
 
 on:
   push:
-    paths:
-      - '**/*.py'
-      - 'data/maiven.db'
-      - 'create_views.sql'
-  pull_request:
-
+    branches:
+      - main
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.10'
 
       - name: Install dependencies
         run: |
-          pip install pytest
+          pip install -r requirements.txt
+          pip install pytest 
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
           pytest --maxfail=1 --disable-warnings -q
