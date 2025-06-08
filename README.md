@@ -38,7 +38,7 @@
   ```
 ---
 
-- **Notes**
+**Notes**
 This repository demonstrates a prototype end-to-end ETL pipeline for ingesting, validating, and storing Maiven’s policy and company data. For simplicity and because our sample sets contain only 10 and 50 rows, I chose SQLite (via sqlite3.connect) to keep everything self-contained and easily testable. In production—where we might process hundreds of thousands of records—I’d switch to PostgreSQL (psycopg2.connect) with minimal changes, since both follow the Python DB-API cursor pattern.
 
 I layered in Pydantic validations to mirror a production-grade, Pythonic workflow and guard data integrity early. Key fields have been recast (e.g., policy_id to an 8-byte integer) and primary keys defined for efficient lookups. My error handling flags URL-resolution failures and missing fields, with a simple “green/orange/red” alert system to balance strictness against data salvageability. Full end-to-end PDF parsing and cross-document consistency checks would be next, but were outside this exercise’s scope.
