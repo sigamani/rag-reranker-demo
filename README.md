@@ -1,6 +1,11 @@
 # Maiven Practical ETL
+This repository demonstrates a prototype end-to-end ETL pipeline for ingesting, validating, and storing Maiven’s policy and company data. For simplicity and because our sample sets contain only 10 and 50 rows, I chose SQLite (via sqlite3.connect) to keep everything self-contained and easily testable. In production—where we might process hundreds of thousands of records—I’d switch to PostgreSQL (psycopg2.connect) with minimal changes, since both follow the Python DB-API cursor pattern.
 
-This repository contains an end-to-end ETL pipeline that ingests company and policy CSV data, loads them into a local SQLite database, defines a `relevant_policies` view, and exposes a CLI to run the process and query “relevant policies” for a job-interview exercise. It also includes pytest-based unit tests and a GitHub Actions workflow that will fail if tests do not pass.
+I layered in Pydantic validations to mirror a production-grade, Pythonic workflow and guard data integrity early. Key fields have been recast (e.g., policy_id to an 8-byte integer) and primary keys defined for efficient lookups. My error handling flags URL-resolution failures and missing fields, with a simple “green/orange/red” alert system to balance strictness against data salvageability. Full end-to-end PDF parsing and cross-document consistency checks would be next, but were outside this exercise’s scope.
+
+I opted not to introduce Pandas—although it excels at exploratory ETL—because our data volume and structure are straightforward. A context manager plus Pydantic and structured logging has proven more than adequate. Down the road, a document store or a JSONL table might better model our dynamic sectors lists, especially as we scale into ML workflows (e.g., Huggingface’s Transformers).
+
+Finally, rather than over-architecting with orchestration tools like Dagster or Airflow, I kept main.py linear and simple, complemented by pytest unit tests and a GitHub Actions CI workflow. This ensures that any future changes that break our core “relevant policies” query are caught immediately.
 
 ## Prerequisites
 
