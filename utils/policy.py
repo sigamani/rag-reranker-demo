@@ -12,17 +12,20 @@ from utils.helpers import non_empty_str, strip_html_tags, map_country_code
 from datetime import datetime
 from pydantic import field_validator
 from pydantic import field_validator, parse_obj_as
+
 logger = logging.getLogger(__name__)
 
 from pydantic import field_validator, TypeAdapter
+
 _date_adapter = TypeAdapter(date)
 _datetime_adapter = TypeAdapter(datetime)
+
 
 @dataclass(config={"populate_by_name": True})
 class Policy:
     policy_id: int
     name: str
-    geography: str                   
+    geography: str
     published_date: date
     updated_date: datetime
     status: int
@@ -67,8 +70,10 @@ class Policy:
     def parse_status(cls, v):
         if isinstance(v, str):
             text = v.strip().lower()
-            if text == "active":   return 1
-            if text == "inactive": return 0
+            if text == "active":
+                return 1
+            if text == "inactive":
+                return 0
             raise ValueError(f"Unknown status: {v!r}")
         return int(v)
 

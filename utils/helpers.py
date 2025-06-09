@@ -1,7 +1,9 @@
 import re
 import pycountry
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def strip_html_tags(text: str) -> str:
     return " ".join(re.sub(r"<[^>]+>", "", text).split())

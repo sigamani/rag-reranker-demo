@@ -28,7 +28,7 @@ from sentence_transformers import SentenceTransformer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-#You can get an anthropic API key here: https://console.anthropic.com/settings/keys
+# You can get an anthropic API key here: https://console.anthropic.com/settings/keys
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 client = anthropic.Client(api_key=ANTHROPIC_API_KEY)
 

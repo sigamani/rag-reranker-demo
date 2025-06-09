@@ -12,10 +12,14 @@ from utils.sqlite_helpers import (
 
 logger = logging.getLogger(__name__)
 
+
 def color_code(rate: float) -> str:
-    if rate < 0.05:   return "GREEN"
-    if rate <= 0.20:  return "ORANGE"
+    if rate < 0.05:
+        return "GREEN"
+    if rate <= 0.20:
+        return "ORANGE"
     return "RED"
+
 
 def print_summary(name, total, success, errors):
     pct = f"{(success/total*100):.1f}%" if total else "N/A"
@@ -23,6 +27,7 @@ def print_summary(name, total, success, errors):
     for col, cnt in errors.items():
         rate = cnt / total
         print(f"  • {col}: {cnt} errors ({rate:.1%}) → {color_code(rate)}")
+
 
 def main():
     # configure_logging()
@@ -43,7 +48,7 @@ def main():
 
     print("\nRelevant policies by company:")
     for row in fetch_relevant(db_path):
-       print(row)
+        print(row)
 
     # 1) create the view
     register_views(db_path, view_sql_path="sql/create_views.sql")
@@ -52,11 +57,16 @@ def main():
     rows = fetch_relevant(db_path)
     if rows:
         print("\nRelevant policies by company:")
-        print(f"{'company_id':<12} {'policy_id':<30} {'geography':<15} {'updated_date':<20} {'avg_days'}")
+        print(
+            f"{'company_id':<12} {'policy_id':<30} {'geography':<15} {'updated_date':<20} {'avg_days'}"
+        )
         for company_id, policy_id, geography, updated_date, avg_days in rows:
-            print(f"{company_id:<12} {policy_id:<30} {geography:<15} {updated_date:<20} {avg_days:.1f}")
+            print(
+                f"{company_id:<12} {policy_id:<30} {geography:<15} {updated_date:<20} {avg_days:.1f}"
+            )
     else:
         print("No relevant policies found.")
+
 
 if __name__ == "__main__":
     main()

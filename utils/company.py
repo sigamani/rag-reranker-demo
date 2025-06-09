@@ -6,6 +6,7 @@ from utils.helpers import map_country_code
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Company:
     company_id: str
@@ -29,6 +30,7 @@ class Company:
         except Exception:
             # fallback to common datetime parse
             from dateutil import parser
+
             return parser.parse(v)
 
     @field_validator("operating_jurisdiction", mode="before")
