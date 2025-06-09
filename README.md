@@ -48,7 +48,7 @@ The project includes CI/CD via [GitHub Actions](https://github.com/sigamani/maiv
 I had more time, here’s what I would prioritise next:
 - Refactor the codebase to simplify structure and reduce technical debt (I've half used dataclasses for the policy asset and Pydantic BaseModel for the company asset for example and the insert logic is too obtuse right now).
 - Download and parse PDFs locally, avoiding HTTP requests and building a more reliable, self-contained data lake.
-- Explore additional public datasets, especially those that can enrich the policy or company data i.e. [here](https://github.com/sigamani/maiven-practical/blob/main/sql/create_views.sql).
+- Explore additional public datasets, especially those that can enrich the policy or company data such as this one [here](https://www.eea.europa.eu/en/datahub/datahubitem-view/6f1efaf1-ae32-48cb-b962-0891f84b1f5f?activeAccordion=1090804).
 - Evaluate alternative database options, depending on anticipated load and business direction—e.g. PostgreSQL, a vector store, or a graph DB. For large-scale use, I’d also batch inserts or move to an ORM like SQLAlchemy.
 - (Optional) Add an orchestration layer like Dagster, if pipeline complexity or reliability needs increase.
 Define KPIs that align data science with business goals, such as:
