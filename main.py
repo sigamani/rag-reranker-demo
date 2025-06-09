@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import time
+
 import logging
+from utils.logging_config import configure_logging
+configure_logging()
 
 from utils.sqlite_helpers import (
     ensure_db,
@@ -9,8 +12,6 @@ from utils.sqlite_helpers import (
     register_views,
     fetch_relevant,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def color_code(rate: float) -> str:

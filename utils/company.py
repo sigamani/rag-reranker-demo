@@ -1,41 +1,27 @@
 import logging
 from datetime import datetime
-from pydantic.dataclasses import dataclass
-from pydantic import field_validator
 from utils.helpers import map_country_code
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class Company:
-    company_id: str
-    name: str
-    operating_jurisdiction: str
-    sector: str
-    last_login: datetime
+class Company(BaseModel):
+    company_id: int = Field(description="Unique identifier for the company")
+    name: str = Field(description="Name of the company")
+    operating_jurisdiction: str = Field(description="Jurisdiction where the company operates")
+    sector: str = Field(description="Sector in which the company operates")
+    last_login: datetime = Field(description="Last login timestamp of the company")
 
     @field_validator("company_id", mode="before")
-    def ensure_non_empty_id(cls, v: str) -> str:
-        if not v or not v.strip():
-            logger.warning("Empty company_id encountered")
-            raise ValueError("company_id cannot be empty")
-        return v.strip()
-
-    @field_validator("last_login", mode="before")
-    def parse_last_login(cls, v: str) -> datetime:
-        # Expecting ISO format or timestamp
-        try:
-            return datetime.fromisoformat(v)
-        except Exception:
-            # fallback to common datetime parse
-            from dateutil import parser
-
-            return parser.parse(v)
+    def parse_int(cls, v):
+        logger.debug("Parsing company_id: %s", v)
+        return int(v)
 
     @field_validator("operating_jurisdiction", mode="before")
-    def ensure_non_empty_jurisdiction(cls, v: str) -> str:
-        if not v or not v.strip():
-            logger.warning("Empty operating_jurisdiction encountered")
-            raise ValueError("operating_jurisdiction cannot be empty")
-        return map_country_code(v.strip())
+    def parse_country(cls, v):
+        if not v:
+            err = "Operating jurisdiction cannot be empty"
+            logger.error(err)
+            raise ValueError(err)
+        logger.info("Mapping operating jurisdiction: %s", v)
+        return map_country_code(v)
