@@ -44,6 +44,9 @@ def load_policies(db_path):
         "SELECT id, name, description FROM policy WHERE description <> ''"
     ).fetchall()
     conn.close()
+    if not rows:
+        return [], [], []
+
     ids, names, descs = zip(*rows)
     return list(ids), list(names), list(descs)
 
