@@ -1,21 +1,18 @@
 """
-1) I use an embeddings model to create a vector index of policy descriptions,
-then use it to retrieve relevant policies for companies based on their operating jurisdiction and sector.
-Since we have a very small amount of policy data, and the company data is also limited (and simulated)
-the
-2) rerank the retrieved policies using the Claude model from anthropic. This step is to refine the results
-however we do not have too much information in the prompt nor the rich dataset where this becomes necessary.
+Prototype retrieval system for matching companies to relevant climate policies.
 
-This is illustrative. I was toying with the idea creating a simple heuristic measure from a SQL query (i.e. if we have
-a geographical match and a sector match but there arent any sector matches given jurisdictional matches so this wasnt possible
-so I wanted to utilise vector comparisons to get a fuzzy match and spit put a score regardless given the semantic similarity between sectors and jurisdictions)
+This script uses an embedding model to index policy descriptions and retrieve
+semantically similar matches based on a company’s jurisdiction and sector.
+Given the limited (simulated) data, results are reranked using Anthropic’s
+Claude model for illustrative purposes.
 
-If I had more time i would try to attain some real company data and potentially in more of the data from the policies which looks like it
-comes from this huggingface repo with 34.2 million rows: https://huggingface.co/datasets/ClimatePolicyRadar/all-document-text-data. I spent some time looking for data but its an arduous task one which would probably take a dedicated person to source, clean and understand the nature of it.
-But none the less worthwhile if freely available data is all that Maiven has access to right now.
+Originally explored heuristic SQL-based matching, but shifted to vector
+similarity due to sparse sectoral data. In a real-world scenario, this would
+benefit from richer datasets—such as the 34M-row Climate Policy Radar corpus:
+https://huggingface.co/datasets/ClimatePolicyRadar/all-document-text-data
 
-Also, reading around for relevant scores, and what this measurement does I would prioritise recall over precision, since we want to ensure that we don't miss any potentially relevant policies for a company.
-So a weighted precision@K and recall@K metric seems more appropriate for this task.
+Evaluation should prioritise recall over precision to ensure relevant policies
+aren’t missed. Suitable metrics include weighted Precision@K and Recall@K.
 """
 
 import os
@@ -31,7 +28,8 @@ from sentence_transformers import SentenceTransformer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-ANTHROPIC_API_KEY = "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"
+#You can get an anthropic API key here: https://console.anthropic.com/settings/keys
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 client = anthropic.Client(api_key=ANTHROPIC_API_KEY)
 
 DB_PATH = "data/maiven.db"
