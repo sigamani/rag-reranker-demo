@@ -6,12 +6,7 @@ from datetime import datetime, date
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator, HttpUrl
 
-logger = logging.getLogger(__name__)
-
-
 # --- Utility Functions ---
-
-
 def map_country_code(name: str) -> str:
     """Map country names to ISO alpha-2 codes with overrides for edge cases."""
     overrides = {"Turkey": "TR", "Türkiye": "TR", "European Union": "EU"}
@@ -24,7 +19,6 @@ def map_country_code(name: str) -> str:
         country = pycountry.countries.get(name=name.strip())
         if country:
             return country.alpha_2
-        logger.error("Invalid country name: %s", name)
         raise ValueError(f"Invalid country name: {name}")
 
 
@@ -38,9 +32,7 @@ policydoc_pattern = re.compile(
     re.VERBOSE,
 )
 
-
 # --- Data Models ---
-
 
 class Company(BaseModel):
     company_id: int = Field(description="Unique identifier for the company")
