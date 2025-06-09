@@ -27,8 +27,6 @@ The project includes CI/CD via [GitHub Actions](https://github.com/sigamani/maiv
    ```
   	
 - **Summary: Runs a prototype ETL that loads data from a local CSV, stores it in an in-memory SQLite database, then queries and prints the relevant policies for each company.** 
-
-   SQLite DB.Then queries and prints out the “relevant policies by company”:**
   ```python
   python main.py
   ```
