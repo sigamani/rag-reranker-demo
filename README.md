@@ -2,9 +2,10 @@
 
 This repository showcases a prototype ETL pipeline designed to ingest, validate, and store Maiven’s climate policy and company data. Built for small-scale datasets (10–50 rows), it uses SQLite for simplicity but is structured to allow seamless migration to PostgreSQL in production. Data integrity is enforced via Pydantic validations, with typed fields, primary keys, and an alert system to catch common data issues. The implementation avoids Pandas to keep things lightweight and instead relies on modular Python files (`company.py`, `policy.py`, `etl.py`, `main.py`), structured logging, and context managers.
 
-A simple retrieval system was also developed, using an embedding model to build a vector index of climate policy descriptions and retrieve relevant policies by company jurisdiction and sector. Results were optionally reranked using Anthropic’s Claude model, though the impact was limited due to sparse metadata. Vector similarity was preferred over strict SQL heuristics to enable fuzzy matching.
+Question 2: I have answered the question by using temporary SQL views. Please click [here](https://github.com/sigamani/maiven-practical/blob/main/sql/create_views.sql).
+Question 3: A simple retrieval system was also developed, using an embedding model to build a vector index of climate policy descriptions and retrieve relevant policies by company jurisdiction and sector. Results were optionally reranked using Anthropic’s Claude model, though the impact was limited due to sparse metadata. Vector similarity was preferred over strict SQL heuristics to enable fuzzy matching. Please click [here]([https://github.com/sigamani/maiven-practical/blob/main/sql/create_views.sql](https://github.com/sigamani/maiven-practical/blob/main/relevancy.py)) for code.
 
-The project includes CI/CD via [GitHub Actions](https://github.com/sigamani/maiven-practical/actions) and `pytest` for testing. Though orchestration tools like Dagster were considered, they were deemed unnecessary at this stage. Evaluation prioritises recall over precision, with metrics like Precision@K and Recall@K proposed for future iterations. The full set of views can be found [here](https://github.com/sigamani/maiven-practical/blob/main/sql/create_views.sql).
+The project includes CI/CD via [GitHub Actions](https://github.com/sigamani/maiven-practical/actions) and `pytest` for testing. Though orchestration tools like Dagster were considered, they were deemed unnecessary at this stage. Evaluation prioritises recall over precision, with metrics like Precision@K and Recall@K proposed for future iterations.
 
 ## Prerequisites
 
@@ -45,7 +46,7 @@ The project includes CI/CD via [GitHub Actions](https://github.com/sigamani/maiv
 ---
 
 I had more time, here’s what I would prioritise next:
-- Refactor the codebase to simplify structure and reduce technical debt.
+- Refactor the codebase to simplify structure and reduce technical debt (I've half used dataclasses for the policy asset and Pydantic BaseModel for the company asset for example and the insert logic is too obtuse right now).
 - Download and parse PDFs locally, avoiding HTTP requests and building a more reliable, self-contained data lake.
 - Explore additional public datasets, especially those that can enrich the policy or company data i.e. [here](https://github.com/sigamani/maiven-practical/blob/main/sql/create_views.sql).
 - Evaluate alternative database options, depending on anticipated load and business direction—e.g. PostgreSQL, a vector store, or a graph DB. For large-scale use, I’d also batch inserts or move to an ORM like SQLAlchemy.
