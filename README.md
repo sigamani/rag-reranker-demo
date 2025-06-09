@@ -9,7 +9,7 @@ The project includes CI/CD via [GitHub Actions](https://github.com/sigamani/maiv
 
 ## Prerequisites
 
-- Python 3.10 (for the relevancy.py part)
+- Python 3.10 
 - conda or venv or whichever virtual env you prefer
 
 ## Setup
