@@ -4,7 +4,7 @@
 
 **Question 2:** I have answered the question by using temporary SQL views. Please click [here](https://github.com/sigamani/maiven-practical/blob/main/sql/create_views.sql).
 
-**Question 3:** A simple retrieval system was also developed, using an embedding model to build a vector index of climate policy descriptions and retrieve relevant policies by company jurisdiction and sector. Results were optionally reranked using Anthropic’s Claude model, though the impact was limited due to sparse metadata. Vector similarity was preferred over strict SQL heuristics to enable fuzzy matching. Please click [here](https://github.com/sigamani/maiven-practical/blob/main/sql/create_views.sql](https://github.com/sigamani/maiven-practical/blob/main/relevancy.py) for code.
+**Question 3:** A simple retrieval system was also developed, using an embedding model to build a vector index of climate policy descriptions and retrieve relevant policies by company jurisdiction and sector. Results were optionally reranked using Anthropic’s Claude model, though the impact was limited due to sparse metadata. Vector similarity was preferred over strict SQL heuristics to enable fuzzy matching. Please click [here](https://github.com/sigamani/maiven-practical/blob/main/relevancy.py) for code.
 
 The project includes CI/CD via [GitHub Actions](https://github.com/sigamani/maiven-practical/actions) and `pytest` for testing. Though orchestration tools like Dagster were considered, they were deemed unnecessary at this stage. Evaluation prioritises recall over precision, with metrics like Precision@K and Recall@K proposed for future iterations.
 
