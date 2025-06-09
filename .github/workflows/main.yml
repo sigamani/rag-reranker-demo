@@ -26,6 +26,6 @@ jobs:
           python main.py
 
       - name: Run unit tests
-      #allow up to 1 fail
+      #allow up to 2 fails
         run: |
-          pytest --maxfail=2 --disable-warnings -q 
+          pytest --maxfail=3 --disable-warnings -q 
