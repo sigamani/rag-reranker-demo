@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import time
+
 from utils.sqlite_helpers import (
     ensure_db,
     insert_companies,
