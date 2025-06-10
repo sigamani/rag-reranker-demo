@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 import time
 
-from utils.logging_config import configure_logging
-configure_logging()
-
 from utils.sqlite_helpers import (
     ensure_db,
     insert_companies,
@@ -12,60 +9,86 @@ from utils.sqlite_helpers import (
     fetch_relevant,
 )
 
+# Constants
+ERROR_THRESHOLDS = {"GREEN": 0.05, "ORANGE": 0.20}
+PATHS = {
+    "db": "data/maiven.db",
+    "ddl": "sql/create_tables.sql",
+    "views": "sql/create_views.sql",
+    "companies": "data/company_data.csv",
+    "policies": "data/random_policies.csv"
+}
 
-def color_code(rate: float) -> str:
-    if rate < 0.05:
+
+def get_error_rate_color(rate: float) -> str:
+    if rate < ERROR_THRESHOLDS["GREEN"]:
         return "GREEN"
-    if rate <= 0.20:
+    if rate <= ERROR_THRESHOLDS["ORANGE"]:
         return "ORANGE"
     return "RED"
 
 
-def print_summary(name, total, success, errors):
-    pct = f"{(success/total*100):.1f}%" if total else "N/A"
-    print(f"{name}: {success}/{total} succeeded ({pct})")
+def calculate_success_rate(success: int, total: int) -> str:
+    return f"{(success / total * 100):.1f}%" if total else "N/A"
+
+
+def print_error_summary(errors: dict, total: int) -> None:
     for col, cnt in errors.items():
         rate = cnt / total
-        print(f"  • {col}: {cnt} errors ({rate:.1%}) → {color_code(rate)}")
+        color = get_error_rate_color(rate)
+        print(f"  • {col}: {cnt} errors ({rate:.1%}) → {color}")
 
 
-def main():
-    # configure_logging()
-    start = time.time()
-    db_path = "data/maiven.db"
+def print_summary(name: str, total: int, success: int, errors: dict) -> None:
+    pct = calculate_success_rate(success, total)
+    print(f"{name}: {success}/{total} succeeded ({pct})")
+    print_error_summary(errors, total)
 
-    ensure_db(db_path, ddl_sql_path="sql/create_tables.sql")
 
-    total_c, succ_c, err_c = insert_companies(db_path, "data/company_data.csv")
-    total_p, succ_p, err_p = insert_policies(db_path, "data/random_policies.csv")
+def setup_database(db_path: str) -> None:
+    ensure_db(db_path, PATHS["ddl"])
+    register_views(db_path, PATHS["views"])
 
-    register_views(db_path, view_sql_path="sql/create_views.sql")
 
-    elapsed = time.time() - start
-    print(f"\nETL finished in {elapsed:.2f}s\n")
-    print_summary("Companies", total_c, succ_c, err_c)
-    print_summary("Policies", total_p, succ_p, err_p)
+def run_etl(db_path: str) -> tuple:
+    company_results = insert_companies(db_path, PATHS["companies"])
+    policy_results = insert_policies(db_path, PATHS["policies"])
+    return company_results, policy_results
 
-    print("\nRelevant policies by company:")
-    for row in fetch_relevant(db_path):
-        print(row)
 
-    # 1) create the view
-    register_views(db_path, view_sql_path="sql/create_views.sql")
+def print_table_header() -> None:
+    headers = ['company_id', 'policy_id', 'geography', 'updated_date', 'avg_days']
+    print(f"{headers[0]:<12} {headers[1]:<30} {headers[2]:<15} {headers[3]:<20} {headers[4]}")
 
-    # 2) pull back and print the “relevant_policies” view
+
+def print_table_rows(rows: list) -> None:
+    for company_id, policy_id, geography, updated_date, avg_days in rows:
+        print(f"{company_id:<12} {policy_id:<30} {geography:<15} {updated_date:<20} {avg_days:.1f}")
+
+
+def display_results(db_path: str) -> None:
     rows = fetch_relevant(db_path)
     if rows:
         print("\nRelevant policies by company:")
-        print(
-            f"{'company_id':<12} {'policy_id':<30} {'geography':<15} {'updated_date':<20} {'avg_days'}"
-        )
-        for company_id, policy_id, geography, updated_date, avg_days in rows:
-            print(
-                f"{company_id:<12} {policy_id:<30} {geography:<15} {updated_date:<20} {avg_days:.1f}"
-            )
+        print_table_header()
+        print_table_rows(rows)
     else:
         print("No relevant policies found.")
+
+
+def main():
+    start = time.time()
+
+    setup_database(PATHS["db"])
+    company_results, policy_results = run_etl(PATHS["db"])
+
+    elapsed = time.time() - start
+    print(f"\nETL finished in {elapsed:.2f}s\n")
+
+    print_summary("Companies", *company_results)
+    print_summary("Policies", *policy_results)
+
+    display_results(PATHS["db"])
 
 
 if __name__ == "__main__":

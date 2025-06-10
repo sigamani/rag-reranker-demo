@@ -33,14 +33,20 @@ The project includes CI/CD via [GitHub Actions](https://github.com/sigamani/maiv
 
 - **You should see terminal output confirming all records were processed, with 3 rows excluded during the cleaning step:**
   ```bash
-  Companies: 10/10 succeeded (100.0%)
-  Policies: 50/50 succeeded (100.0%)  
+  Companies: 100%|██████████| 10/10 [00:00<00:00, 63.50it/s]
+  Policies: 100%|██████████| 50/50 [01:09<00:00,  1.39s/it]
 
-  Relevant policies by company:
-  company_id | policy_id | geography | updated_date         | avg_days
-  -------------------------------------------------------------------
-  3          | 1434      | DE        | 2025-03-18 00:24:50  | 82.5
-  4          | 1257      | GB        | 2025-03-23 08:51:27  | 77.5
+   ETL finished in 69.67s
+
+   Companies: 0/10 succeeded (0.0%)
+     • name: 10 errors (100.0%) → RED
+     • operating_jurisdiction: 10 errors (100.0%) → RED
+   Policies: 0/50 succeeded (0.0%)
+     • policy_id: 50 errors (100.0%) → RED
+     • published_date: 50 errors (100.0%) → RED
+     • topics: 50 errors (100.0%) → RED
+     • source_url: 11 errors (22.0%) → RED
+     • status: 7 errors (14.0%) → ORANGE
   ```
 ---
 
